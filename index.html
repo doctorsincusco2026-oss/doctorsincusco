@@ -823,7 +823,7 @@ function hideStatus() {
   el.className = 'modal-status'; el.textContent = '';
 }
 
-async function submitConsultation() {
+function submitConsultation() {
     console.log('DEBUG: submitConsultation() called');
     const name = document.getElementById('patientName').value.trim();
     const phone = document.getElementById('patientPhone').value.trim();
@@ -846,59 +846,38 @@ async function submitConsultation() {
     if (spinner) spinner.style.display = 'inline-block';
     showStatus(isTestMode ? '🧪 Enviando notificación de prueba...' : '📧 Enviando notificación...', 'success');
 
-    try {
-      // Crear FormData (formato que Formspree espera)
-      const formData = new FormData();
-      formData.append('name', name);
-      formData.append('phone', phone);
-      formData.append('type', type);
-      formData.append('symptoms', symptoms);
-      formData.append('payment', isTestMode ? '$5 USD (simulado - modo prueba)' : '$5 USD (pagado via PayPal)');
-      formData.append('meetLink', meetLink);
-      formData.append('date', now);
-      formData.append('_subject', '🩺 Nueva consulta - ' + name);
-      formData.append('_replyto', phone);
+    // Copiar datos al formulario oculto de Formspree
+    document.getElementById('fs_name').value = name;
+    document.getElementById('fs_phone').value = phone;
+    document.getElementById('fs_type').value = type;
+    document.getElementById('fs_symptoms').value = symptoms;
+    document.getElementById('fs_payment').value = isTestMode ? '$5 USD (simulado - modo prueba)' : '$5 USD (pagado via PayPal)';
+    document.getElementById('fs_meetLink').value = meetLink;
+    document.getElementById('fs_date').value = now;
+    document.getElementById('fs_subject').value = '🩺 Nueva consulta - ' + name;
+    document.getElementById('fs_replyto').value = phone;
 
-      // Enviar a Formspree
-      const response = await fetch(CONFIG.EMAIL_SCRIPT_URL, {
-        method: 'POST',
-        body: formData,
-        headers: {
-          'Accept': 'application/json'
-        }
-      });
+    // Enviar formulario a Formspree
+    document.getElementById('formspreeForm').submit();
 
-      if (response.ok) {
-        if (isTestMode) {
-          showStatus('✅ Prueba completada. Revisa tu correo doctorsincusco2026@gmail.com', 'success');
-          if (spinner) spinner.style.display = 'none';
-          btnText.textContent = '✅ Prueba enviada';
-
-          setTimeout(() => {
-            closeBookingModal();
-            document.getElementById('testModeToggle').checked = false;
-            toggleTestMode();
-            btn.disabled = false;
-            btnText.textContent = '💳 Pay $5 USD with PayPal';
-          }, 4000);
-        } else {
-          showStatus('✅ Notificación enviada. Redirigiendo a PayPal...', 'success');
-          setTimeout(() => {
-            window.location.href = CONFIG.PAYPAL_LINK + '?custom=' + encodeURIComponent(name + '|' + phone + '|' + type);
-          }, 1500);
-        }
-      } else {
-        const result = await response.json();
-        console.error('Formspree error:', result);
-        throw new Error(result.error || 'Error ' + response.status);
-      }
-
-    } catch (error) {
-      console.error('Error:', error);
-      showStatus('⚠️ Error al notificar. Intenta de nuevo.', 'error');
-      btn.disabled = false;
+    // Mostrar éxito al usuario
+    if (isTestMode) {
+      showStatus('✅ Prueba completada. Revisa tu correo doctorsincusco2026@gmail.com', 'success');
       if (spinner) spinner.style.display = 'none';
-      btnText.textContent = isTestMode ? '🧪 Simular Pago de Prueba' : '💳 Pay $5 USD with PayPal';
+      btnText.textContent = '✅ Prueba enviada';
+
+      setTimeout(() => {
+        closeBookingModal();
+        document.getElementById('testModeToggle').checked = false;
+        toggleTestMode();
+        btn.disabled = false;
+        btnText.textContent = '💳 Pay $5 USD with PayPal';
+      }, 4000);
+    } else {
+      showStatus('✅ Notificación enviada. Redirigiendo a PayPal...', 'success');
+      setTimeout(() => {
+        window.location.href = CONFIG.PAYPAL_LINK + '?custom=' + encodeURIComponent(name + '|' + phone + '|' + type);
+      }, 1500);
     }
   }
 
