@@ -847,25 +847,26 @@ async function submitConsultation() {
     showStatus(isTestMode ? '🧪 Enviando notificación de prueba...' : '📧 Enviando notificación...', 'success');
 
     try {
+      // Crear FormData (formato que Formspree espera)
+      const formData = new FormData();
+      formData.append('name', name);
+      formData.append('phone', phone);
+      formData.append('type', type);
+      formData.append('symptoms', symptoms);
+      formData.append('payment', isTestMode ? '$5 USD (simulado - modo prueba)' : '$5 USD (pagado via PayPal)');
+      formData.append('meetLink', meetLink);
+      formData.append('date', now);
+      formData.append('_subject', '🩺 Nueva consulta - ' + name);
+      formData.append('_replyto', phone);
+
       // Enviar a Formspree
       const response = await fetch(CONFIG.EMAIL_SCRIPT_URL, {
         method: 'POST',
-        headers: { 'Accept': 'application/json' },
-        body: new URLSearchParams({
-          name: name,
-          phone: phone,
-          type: type,
-          symptoms: symptoms,
-          payment: isTestMode ? '$5 USD (simulado - modo prueba)' : '$5 USD (pagado via PayPal)',
-          meetLink: meetLink,
-          date: now,
-          _subject: '🩺 Nueva consulta - ' + name,
-          _replyto: phone
-        })
+        body: formData,
+        headers: {
+          'Accept': 'application/json'
+        }
       });
-
-      const result = await response.json();
-      console.log('Formspree response:', result);
 
       if (response.ok) {
         if (isTestMode) {
@@ -887,7 +888,9 @@ async function submitConsultation() {
           }, 1500);
         }
       } else {
-        throw new Error(result.error || 'Error en Formspree');
+        const result = await response.json();
+        console.error('Formspree error:', result);
+        throw new Error(result.error || 'Error ' + response.status);
       }
 
     } catch (error) {
