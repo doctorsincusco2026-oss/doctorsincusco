@@ -758,7 +758,7 @@ const CONFIG = {
   ADMISION_WHATSAPP: '51913015475',
   CALLMEBOT_API_KEY: 'TU_API_KEY_AQUI',
   GOOGLE_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbw6oO3C_Rlq64q-aBaJsc8at0APtN36LgZpLsmBYlGNOfc63qit_DdUqsKmrvJ1FjqMcg/exec',
-  EMAIL_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbxr4MprTtfwbicqY_9D0etQm36o03s_EeG9YcukMhSxaKIY1X4pdqCfd3s-v8ge1aPI/exec',
+  EMAIL_SCRIPT_URL: 'https://formspree.io/f/xzdldyev',
   PAYPAL_LINK: 'https://paypal.me/doctorsincusco/5'
 };
 
@@ -825,7 +825,6 @@ function hideStatus() {
 
 async function submitConsultation() {
     console.log('DEBUG: submitConsultation() called');
-    const form = document.getElementById('bookingForm');
     const name = document.getElementById('patientName').value.trim();
     const phone = document.getElementById('patientPhone').value.trim();
     const symptoms = document.getElementById('symptoms').value.trim();
@@ -839,61 +838,60 @@ async function submitConsultation() {
       return;
     }
 
-    // CHECK TEST MODE
     const isTestMode = document.getElementById('testModeToggle')?.checked || false;
     const meetLink = 'https://meet.google.com/test-room-123';
     const now = new Date().toLocaleString();
 
-    // Preparar datos para el email
-    const emailData = {
-      name: name,
-      phone: phone,
-      type: type,
-      symptoms: symptoms,
-      payment: isTestMode ? '$5 USD (simulado - modo prueba)' : '$5 USD (pagado via PayPal)',
-      meetLink: meetLink,
-      date: now
-    };
+    btn.disabled = true;
+    if (spinner) spinner.style.display = 'inline-block';
+    showStatus(isTestMode ? '🧪 Enviando notificación de prueba...' : '📧 Enviando notificación...', 'success');
 
-    // Enviar email a recepción (siempre, tanto en prueba como en real)
     try {
-      showStatus(isTestMode ? '🧪 Enviando notificación de prueba...' : '📧 Enviando notificación a recepción...', 'success');
-      btn.disabled = true;
-      if (spinner) spinner.style.display = 'inline-block';
-
+      // Enviar a Formspree
       const response = await fetch(CONFIG.EMAIL_SCRIPT_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(emailData)
+        headers: { 'Accept': 'application/json' },
+        body: new URLSearchParams({
+          name: name,
+          phone: phone,
+          type: type,
+          symptoms: symptoms,
+          payment: isTestMode ? '$5 USD (simulado - modo prueba)' : '$5 USD (pagado via PayPal)',
+          meetLink: meetLink,
+          date: now,
+          _subject: '🩺 Nueva consulta - ' + name,
+          _replyto: phone
+        })
       });
 
       const result = await response.json();
-      console.log('Email response:', result);
+      console.log('Formspree response:', result);
 
-      if (isTestMode) {
-        // MODO PRUEBA: Mostrar éxito, no redirigir a PayPal
-        showStatus('✅ Prueba completada. Revisa tu correo de recepción.', 'success');
-        if (spinner) spinner.style.display = 'none';
-        btnText.textContent = '✅ Prueba enviada';
+      if (response.ok) {
+        if (isTestMode) {
+          showStatus('✅ Prueba completada. Revisa tu correo doctorsincusco2026@gmail.com', 'success');
+          if (spinner) spinner.style.display = 'none';
+          btnText.textContent = '✅ Prueba enviada';
 
-        setTimeout(() => {
-          closeBookingModal();
-          document.getElementById('testModeToggle').checked = false;
-          toggleTestMode();
-          btn.disabled = false;
-          btnText.textContent = '💳 Pay $5 USD with PayPal';
-        }, 4000);
-        return;
+          setTimeout(() => {
+            closeBookingModal();
+            document.getElementById('testModeToggle').checked = false;
+            toggleTestMode();
+            btn.disabled = false;
+            btnText.textContent = '💳 Pay $5 USD with PayPal';
+          }, 4000);
+        } else {
+          showStatus('✅ Notificación enviada. Redirigiendo a PayPal...', 'success');
+          setTimeout(() => {
+            window.location.href = CONFIG.PAYPAL_LINK + '?custom=' + encodeURIComponent(name + '|' + phone + '|' + type);
+          }, 1500);
+        }
+      } else {
+        throw new Error(result.error || 'Error en Formspree');
       }
 
-      // MODO REAL: Redirigir a PayPal después de enviar email
-      showStatus('✅ Notificación enviada. Redirigiendo a PayPal...', 'success');
-      setTimeout(() => {
-        window.location.href = CONFIG.PAYPAL_LINK + '?custom=' + encodeURIComponent(name + '|' + phone + '|' + type);
-      }, 1500);
-
     } catch (error) {
-      console.error('Error enviando email:', error);
+      console.error('Error:', error);
       showStatus('⚠️ Error al notificar. Intenta de nuevo.', 'error');
       btn.disabled = false;
       if (spinner) spinner.style.display = 'none';
@@ -1500,4 +1498,3 @@ function setLang(l) {
   try { lang = localStorage.getItem('cd_lang') || 'en'; } catch(e) {}
   setLang(lang);
 })();
-
