@@ -758,8 +758,7 @@ const CONFIG = {
   ADMISION_WHATSAPP: '51913015475',
   CALLMEBOT_API_KEY: 'TU_API_KEY_AQUI',
   GOOGLE_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbw6oO3C_Rlq64q-aBaJsc8at0APtN36LgZpLsmBYlGNOfc63qit_DdUqsKmrvJ1FjqMcg/exec',
-  EMAIL_SCRIPT_URL: 'https://formspree.io/f/xzdldyev',
-  PAYPAL_LINK: 'https://paypal.me/doctorsincusco/5'
+    PAYPAL_LINK: 'https://paypal.me/doctorsincusco/5'
 };
 
 
@@ -846,38 +845,47 @@ function submitConsultation() {
     if (spinner) spinner.style.display = 'inline-block';
     showStatus(isTestMode ? '🧪 Enviando notificación de prueba...' : '📧 Enviando notificación...', 'success');
 
-    // Copiar datos al formulario oculto de Formspree
-    document.getElementById('fs_name').value = name;
-    document.getElementById('fs_phone').value = phone;
-    document.getElementById('fs_type').value = type;
-    document.getElementById('fs_symptoms').value = symptoms;
-    document.getElementById('fs_payment').value = isTestMode ? '$5 USD (simulado - modo prueba)' : '$5 USD (pagado via PayPal)';
-    document.getElementById('fs_meetLink').value = meetLink;
-    document.getElementById('fs_date').value = now;
-    document.getElementById('fs_subject').value = '🩺 Nueva consulta - ' + name;
-    
-    // Enviar formulario a Formspree
-    document.getElementById('formspreeForm').submit();
+    // Preparar datos para EmailJS
+    const templateParams = {
+      name: name,
+      phone: phone,
+      type: type,
+      symptoms: symptoms,
+      payment: isTestMode ? '$5 USD (simulado - modo prueba)' : '$5 USD (pagado via PayPal)',
+      meetLink: meetLink,
+      date: now
+    };
 
-    // Mostrar éxito al usuario
-    if (isTestMode) {
-      showStatus('✅ Prueba completada. Revisa tu correo doctorsincusco2026@gmail.com', 'success');
-      if (spinner) spinner.style.display = 'none';
-      btnText.textContent = '✅ Prueba enviada';
+    // Enviar con EmailJS
+    emailjs.send('service_8yawl2i', 'template_w200y2f', templateParams)
+      .then(function(response) {
+        console.log('EmailJS SUCCESS:', response.status, response.text);
 
-      setTimeout(() => {
-        closeBookingModal();
-        document.getElementById('testModeToggle').checked = false;
-        toggleTestMode();
+        if (isTestMode) {
+          showStatus('✅ Prueba completada. Revisa tu correo doctorsincusco2026@gmail.com', 'success');
+          if (spinner) spinner.style.display = 'none';
+          btnText.textContent = '✅ Prueba enviada';
+
+          setTimeout(() => {
+            closeBookingModal();
+            document.getElementById('testModeToggle').checked = false;
+            toggleTestMode();
+            btn.disabled = false;
+            btnText.textContent = '💳 Pay $5 USD with PayPal';
+          }, 4000);
+        } else {
+          showStatus('✅ Notificación enviada. Redirigiendo a PayPal...', 'success');
+          setTimeout(() => {
+            window.location.href = CONFIG.PAYPAL_LINK + '?custom=' + encodeURIComponent(name + '|' + phone + '|' + type);
+          }, 1500);
+        }
+      }, function(error) {
+        console.error('EmailJS FAILED:', error);
+        showStatus('⚠️ Error al notificar. Intenta de nuevo.', 'error');
         btn.disabled = false;
-        btnText.textContent = '💳 Pay $5 USD with PayPal';
-      }, 4000);
-    } else {
-      showStatus('✅ Notificación enviada. Redirigiendo a PayPal...', 'success');
-      setTimeout(() => {
-        window.location.href = CONFIG.PAYPAL_LINK + '?custom=' + encodeURIComponent(name + '|' + phone + '|' + type);
-      }, 1500);
-    }
+        if (spinner) spinner.style.display = 'none';
+        btnText.textContent = isTestMode ? '🧪 Simular Pago de Prueba' : '💳 Pay $5 USD with PayPal';
+      });
   }
 
 document.addEventListener('click', function(e) {
@@ -886,6 +894,12 @@ document.addEventListener('click', function(e) {
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') closeBookingModal();
 });
+</script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script type="text/javascript">
+  (function() {
+    emailjs.init({ publicKey: "qFY2ekhuI47u0uZfx" });
+  })();
 </script>
 </head>
 <body class="lang-en">
@@ -1438,18 +1452,6 @@ document.addEventListener('keydown', function(e) {
     </div>
   </div>
 </footer>
-
-<!-- FORMSPREE HIDDEN FORM -->
-<form id="formspreeForm" action="https://formspree.io/f/xzdldyev" method="POST" style="display:none;" target="_blank">
-  <input type="text" name="name" id="fs_name">
-  <input type="text" name="phone" id="fs_phone">
-  <input type="text" name="type" id="fs_type">
-  <input type="text" name="symptoms" id="fs_symptoms">
-  <input type="text" name="payment" id="fs_payment">
-  <input type="text" name="meetLink" id="fs_meetLink">
-  <input type="text" name="date" id="fs_date">
-  <input type="hidden" name="_subject" id="fs_subject" value="🩺 Nueva consulta">
-</form>
 
 </body>
 </html>
