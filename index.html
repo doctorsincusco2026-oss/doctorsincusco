@@ -855,8 +855,7 @@ function submitConsultation() {
     document.getElementById('fs_meetLink').value = meetLink;
     document.getElementById('fs_date').value = now;
     document.getElementById('fs_subject').value = '🩺 Nueva consulta - ' + name;
-    document.getElementById('fs_replyto').value = phone;
-
+    
     // Enviar formulario a Formspree
     document.getElementById('formspreeForm').submit();
 
@@ -1439,6 +1438,22 @@ document.addEventListener('keydown', function(e) {
     </div>
   </div>
 </footer>
+
+<!-- FORMSPREE HIDDEN FORM -->
+<form id="formspreeForm" action="https://formspree.io/f/xzdldyev" method="POST" style="display:none;" target="_blank">
+  <input type="text" name="name" id="fs_name">
+  <input type="text" name="phone" id="fs_phone">
+  <input type="text" name="type" id="fs_type">
+  <input type="text" name="symptoms" id="fs_symptoms">
+  <input type="text" name="payment" id="fs_payment">
+  <input type="text" name="meetLink" id="fs_meetLink">
+  <input type="text" name="date" id="fs_date">
+  <input type="hidden" name="_subject" id="fs_subject" value="🩺 Nueva consulta">
+</form>
+
+</body>
+</html>
+
 
 <!-- WA FLOAT -->
 <a href="https://wa.me/51913015475" class="wa-float" target="_blank" target="_blank">
